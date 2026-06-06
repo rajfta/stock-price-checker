@@ -1,8 +1,8 @@
 import { PrismaService } from "../prisma/prisma.service";
-import { TrackedSymbolService } from "./tracked-symbol.service";
+import { TrackedSymbolRepository } from "./tracked-symbol.repository";
 
-describe("TrackedSymbolService", () => {
-    let service: TrackedSymbolService;
+describe("TrackedSymbolRepository", () => {
+    let repository: TrackedSymbolRepository;
     let findMany: jest.Mock;
     let upsert: jest.Mock;
 
@@ -12,13 +12,13 @@ describe("TrackedSymbolService", () => {
         const prisma = {
             trackedSymbol: { findMany, upsert },
         } as unknown as PrismaService;
-        service = new TrackedSymbolService(prisma);
+        repository = new TrackedSymbolRepository(prisma);
     });
 
     it("returns the names of all active tracked symbols", async () => {
         findMany.mockResolvedValue([{ symbol: "AAPL" }, { symbol: "TSLA" }]);
 
-        const symbols = await service.getActiveSymbols();
+        const symbols = await repository.getActiveSymbols();
 
         expect(symbols).toEqual(["AAPL", "TSLA"]);
         expect(findMany).toHaveBeenCalledWith({
@@ -30,7 +30,7 @@ describe("TrackedSymbolService", () => {
     it("activates a symbol for tracking", async () => {
         upsert.mockResolvedValue({});
 
-        await service.activate("AAPL");
+        await repository.activate("AAPL");
 
         expect(upsert).toHaveBeenCalledWith({
             where: { symbol: "AAPL" },

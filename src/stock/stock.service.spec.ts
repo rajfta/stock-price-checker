@@ -1,8 +1,8 @@
 import { NotFoundException } from "@nestjs/common";
 import { PollerService } from "./poller.service";
-import { StockPriceService } from "./stock-price.service";
+import { StockPriceRepository } from "./stock-price.repository";
 import { StockService } from "./stock.service";
-import { TrackedSymbolService } from "./tracked-symbol.service";
+import { TrackedSymbolRepository } from "./tracked-symbol.repository";
 
 describe("StockService", () => {
     let service: StockService;
@@ -21,8 +21,8 @@ describe("StockService", () => {
 
         service = new StockService(
             { pollSymbol } as unknown as PollerService,
-            { activate } as unknown as TrackedSymbolService,
-            { getLatest, getLastPrices } as unknown as StockPriceService,
+            { activate } as unknown as TrackedSymbolRepository,
+            { getLatest, getLastPrices } as unknown as StockPriceRepository,
             { calculate },
         );
     });

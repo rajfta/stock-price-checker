@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { MovingAverageService } from "./moving-average.service";
 import { PollerService } from "./poller.service";
-import { StockPriceService } from "./stock-price.service";
-import { TrackedSymbolService } from "./tracked-symbol.service";
+import { StockPriceRepository } from "./stock-price.repository";
+import { TrackedSymbolRepository } from "./tracked-symbol.repository";
 
 export interface StockSummary {
     symbol: string;
@@ -15,8 +15,8 @@ export interface StockSummary {
 export class StockService {
     constructor(
         private readonly poller: PollerService,
-        private readonly trackedSymbols: TrackedSymbolService,
-        private readonly stockPrices: StockPriceService,
+        private readonly trackedSymbols: TrackedSymbolRepository,
+        private readonly stockPrices: StockPriceRepository,
         private readonly movingAverage: MovingAverageService,
     ) {}
 
@@ -31,7 +31,7 @@ export class StockService {
             throw new NotFoundException(`No price data for symbol: ${symbol}`);
         }
 
-        /// Get the last prices (including the latest, default=10) and calculate the moving average.
+        // Get the last prices (default 10) and compute the moving average.
         const prices = await this.stockPrices.getLastPrices(symbol);
         const movingAverage = this.movingAverage.calculate(prices);
 

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
-export class StockPriceService {
+export class StockPriceRepository {
     constructor(private readonly prisma: PrismaService) {}
 
     async getLastPrices(symbol: string, limit = 10): Promise<number[]> {

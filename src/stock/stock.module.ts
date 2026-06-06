@@ -3,9 +3,9 @@ import { FinnhubModule } from "../finnhub/finnhub.module";
 import { MovingAverageService } from "./moving-average.service";
 import { PollerService } from "./poller.service";
 import { StockController } from "./stock.controller";
-import { StockPriceService } from "./stock-price.service";
+import { StockPriceRepository } from "./stock-price.repository";
 import { StockService } from "./stock.service";
-import { TrackedSymbolService } from "./tracked-symbol.service";
+import { TrackedSymbolRepository } from "./tracked-symbol.repository";
 
 @Module({
     imports: [FinnhubModule],
@@ -13,8 +13,8 @@ import { TrackedSymbolService } from "./tracked-symbol.service";
     providers: [
         StockService,
         PollerService,
-        StockPriceService,
-        TrackedSymbolService,
+        StockPriceRepository,
+        TrackedSymbolRepository,
         MovingAverageService,
     ],
 })

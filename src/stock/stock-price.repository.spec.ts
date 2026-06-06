@@ -1,8 +1,8 @@
 import { PrismaService } from "../prisma/prisma.service";
-import { StockPriceService } from "./stock-price.service";
+import { StockPriceRepository } from "./stock-price.repository";
 
-describe("StockPriceService", () => {
-    let service: StockPriceService;
+describe("StockPriceRepository", () => {
+    let repository: StockPriceRepository;
     let findMany: jest.Mock;
     let findFirst: jest.Mock;
     let create: jest.Mock;
@@ -18,7 +18,7 @@ describe("StockPriceService", () => {
         const prisma = {
             stockPrice: { findMany, create, findFirst },
         } as unknown as PrismaService;
-        service = new StockPriceService(prisma);
+        repository = new StockPriceRepository(prisma);
     });
 
     it("returns the last 10 prices for a symbol (newest first) as numbers", async () => {
@@ -28,7 +28,7 @@ describe("StockPriceService", () => {
             { price: 100 },
         ]);
 
-        const prices = await service.getLastPrices(mockSymbol);
+        const prices = await repository.getLastPrices(mockSymbol);
 
         expect(prices).toEqual([300, 200, 100]);
         expect(findMany).toHaveBeenCalledWith({
@@ -42,7 +42,7 @@ describe("StockPriceService", () => {
     it("records a price row for a symbol", async () => {
         create.mockResolvedValue({});
 
-        await service.record(mockSymbol, mockPrice, mockTimestamp);
+        await repository.record(mockSymbol, mockPrice, mockTimestamp);
 
         expect(create).toHaveBeenCalledWith({
             data: {
@@ -59,7 +59,7 @@ describe("StockPriceService", () => {
             timestamp: mockTimestamp,
         });
 
-        const result = await service.getLatest(mockSymbol);
+        const result = await repository.getLatest(mockSymbol);
 
         expect(result).toEqual({
             price: mockPrice,
@@ -75,7 +75,7 @@ describe("StockPriceService", () => {
     it("returns null if no price is found for a symbol", async () => {
         findFirst.mockResolvedValue(null);
 
-        const result = await service.getLatest(mockSymbol);
+        const result = await repository.getLatest(mockSymbol);
 
         expect(result).toBeNull();
         expect(findFirst).toHaveBeenCalledWith({
