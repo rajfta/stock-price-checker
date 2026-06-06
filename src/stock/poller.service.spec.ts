@@ -1,8 +1,8 @@
 import { Logger } from "@nestjs/common";
 import { FinnhubService } from "../finnhub/finnhub.service";
 import { PollerService } from "./poller.service";
-import { StockPriceService } from "./stock-price.service";
-import { TrackedSymbolService } from "./tracked-symbol.service";
+import { StockPriceRepository } from "./stock-price.repository";
+import { TrackedSymbolRepository } from "./tracked-symbol.repository";
 
 describe("PollerService", () => {
     let poller: PollerService;
@@ -17,9 +17,9 @@ describe("PollerService", () => {
         record = jest.fn().mockResolvedValue(undefined);
 
         poller = new PollerService(
-            { getActiveSymbols } as unknown as TrackedSymbolService,
+            { getActiveSymbols } as unknown as TrackedSymbolRepository,
             { getQuote } as unknown as FinnhubService,
-            { record } as unknown as StockPriceService,
+            { record } as unknown as StockPriceRepository,
         );
     });
 
@@ -58,10 +58,8 @@ describe("PollerService", () => {
                 : Promise.resolve(mockQuote),
         );
 
-        // tick must NOT throw even though BAD fails.
         await expect(poller.tick()).resolves.toBeUndefined();
 
-        // TSLA still recorded; the failure was logged, not propagated.
         expect(record).toHaveBeenCalledTimes(1);
         expect(record).toHaveBeenCalledWith(
             "TSLA",

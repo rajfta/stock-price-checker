@@ -56,14 +56,10 @@ describe("FinnhubService", () => {
     });
 
     it("maps an API failure to ServiceUnavailableException after retrying", async () => {
-        // Silence (and assert) the error this path logs — keeps the test
-        // output clean and turns the noisy log into a real expectation.
         const errorLog = jest
             .spyOn(Logger.prototype, "error")
             .mockImplementation();
 
-        // The error factory runs once per SUBSCRIPTION, so counting it proves
-        // retry({ count: 2 }) re-subscribed: 1 initial + 2 retries = 3.
         let attempts = 0;
         httpService.get.mockReturnValue(
             throwError(() => {

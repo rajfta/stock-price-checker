@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
-export class TrackedSymbolService {
+export class TrackedSymbolRepository {
     constructor(private readonly prisma: PrismaService) {}
 
     async getActiveSymbols(): Promise<string[]> {
@@ -12,5 +12,13 @@ export class TrackedSymbolService {
         });
 
         return rows.map((row) => row.symbol);
+    }
+
+    async activate(symbol: string): Promise<void> {
+        await this.prisma.trackedSymbol.upsert({
+            where: { symbol },
+            update: { active: true },
+            create: { symbol, active: true },
+        });
     }
 }
