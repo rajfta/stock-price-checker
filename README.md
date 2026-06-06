@@ -1,98 +1,117 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Stock Price Checker
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A [NestJS](https://nestjs.com) service that periodically fetches stock prices from
+[Finnhub](https://finnhub.io), stores them in PostgreSQL via Prisma, and exposes the latest
+price plus a 10-point moving average through a documented REST API.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tech stack
 
-## Description
+- **NestJS 11** (TypeScript, strict)
+- **PostgreSQL 16** + **Prisma 7** (driver adapter)
+- **@nestjs/schedule** — per-minute cron polling
+- **@nestjs/axios + RxJS** — resilient Finnhub client (timeout / retry / error mapping)
+- **class-validator** — environment + request validation
+- **@nestjs/swagger** — OpenAPI docs
+- **Jest** (unit + e2e), **ESLint** + **Prettier**
+- **Docker** + **Docker Compose**, **GitHub Actions** CI
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Quick start (Docker — recommended)
 
-## Project setup
+The whole stack (app **and** database) runs with one command — no local Node, pnpm, or
+Postgres required, only Docker.
 
 ```bash
-$ pnpm install
+cp .env.example .env          # then set FINNHUB_API_KEY (free key from finnhub.io)
+docker compose up --build
 ```
 
-## Compile and run the project
+This builds the app image, starts Postgres, applies migrations, and serves the API.
+Open the interactive docs at **<http://localhost:3000/docs>**.
+
+## API
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `PUT`  | `/stock/:symbol` | Start per-minute tracking for a symbol (validates it first) |
+| `GET`  | `/stock/:symbol` | Latest price, last-updated time, and 10-point moving average |
+| `GET`  | `/health` | Liveness check |
+| `GET`  | `/docs` | Swagger UI |
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+curl -X PUT http://localhost:3000/stock/AAPL   # start tracking
+curl http://localhost:3000/stock/AAPL          # { symbol, price, lastUpdated, movingAverage }
 ```
 
-## Run tests
+Errors: invalid symbol → `400`, unknown symbol / no data yet → `404`, upstream failure → `503`.
+
+> **Note:** when the market is closed (nights/weekends) Finnhub returns the last close with a
+> frozen timestamp, so the price won't change and the moving average stays flat until trading
+> resumes. The poller de-duplicates by timestamp, so it won't store repeats.
+
+## How it works
+
+- **`PUT /stock/:symbol`** validates the symbol against Finnhub (storing the first price) and
+  marks it active. It no-ops if the symbol is already tracked.
+- A single **`@Cron` poller** runs every minute, loads all active symbols, fetches each quote,
+  and stores new price points — skipping duplicates when the quote hasn't advanced. Per-symbol
+  errors are isolated so one bad symbol can't stop the others.
+- **`GET /stock/:symbol`** returns the latest stored price + timestamp and the mean of the last
+  ≤10 prices (one DB query).
+
+### Architecture
+
+```
+AppModule
+├── ConfigModule (global)        env loading + class-validator validation (fail-fast)
+├── ScheduleModule.forRoot()     cron infrastructure
+├── PrismaModule (global)        PrismaService — driver adapter + lifecycle hooks
+├── HealthModule                 GET /health
+├── FinnhubModule                FinnhubService — typed, resilient HTTP client
+└── StockModule
+    ├── StockController          GET / PUT /stock/:symbol
+    ├── StockService             orchestration (composes the pieces below)
+    ├── PollerService            @Cron poll loop
+    ├── MovingAverageService     pure last-10 calculation
+    ├── StockPriceRepository     prices data access
+    └── TrackedSymbolRepository  tracked-symbol data access
+```
+
+## Local development (without Docker)
+
+Requires Node 22 + pnpm. Use the DB container (or your own Postgres):
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+docker compose up -d postgres   # just the database
+cp .env.example .env            # set FINNHUB_API_KEY; DATABASE_URL points at localhost
+pnpm install
+pnpm prisma migrate dev         # apply migrations
+pnpm start:dev                  # http://localhost:3000
 ```
 
-## Deployment
+## Environment variables
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+See `.env.example`:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+| Variable | Example | Notes |
+|----------|---------|-------|
+| `NODE_ENV` | `development` | |
+| `PORT` | `3000` | |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/stocks?schema=public` | overridden to the `postgres` service host inside Compose |
+| `FINNHUB_API_KEY` | _(your key)_ | **required** |
+| `FINNHUB_BASE_URL` | `https://finnhub.io/api/v1` | |
+
+Missing or invalid variables fail fast at startup (validated by class-validator).
+
+## Testing
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm test       # unit tests
+pnpm test:e2e   # e2e (boots the app, stubs the DB)
+pnpm lint
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- **TDD** for business logic; mocked dependencies keep tests fast and deterministic.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED — built as a take-home exercise.
