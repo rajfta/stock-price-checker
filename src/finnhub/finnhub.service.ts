@@ -10,14 +10,14 @@ import { catchError, firstValueFrom, retry, throwError, timeout } from "rxjs";
 import { EnvironmentVariables } from "../config/env.validation";
 
 export interface FinnhubQuote {
-    c: number;
+    c: number; // Current price
     d: number | null;
     dp: number | null;
     h: number;
     l: number;
     o: number;
     pc: number;
-    t: number;
+    t: number; // Timestamp
 }
 
 @Injectable()

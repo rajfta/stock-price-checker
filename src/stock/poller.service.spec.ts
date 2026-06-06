@@ -58,10 +58,8 @@ describe("PollerService", () => {
                 : Promise.resolve(mockQuote),
         );
 
-        // tick must NOT throw even though BAD fails.
         await expect(poller.tick()).resolves.toBeUndefined();
 
-        // TSLA still recorded; the failure was logged, not propagated.
         expect(record).toHaveBeenCalledTimes(1);
         expect(record).toHaveBeenCalledWith(
             "TSLA",

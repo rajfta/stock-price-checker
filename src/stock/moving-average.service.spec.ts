@@ -4,7 +4,6 @@ describe("MovingAverageService", () => {
     let service: MovingAverageService;
 
     beforeEach(() => {
-        // Pure logic, no dependencies — so no TestingModule needed.
         service = new MovingAverageService();
     });
 
