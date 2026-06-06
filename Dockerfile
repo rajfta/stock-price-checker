@@ -1,6 +1,9 @@
 # ---- Builder: install everything, generate the Prisma client, compile ----
 FROM node:22-slim AS builder
 WORKDIR /app
+# openssl: node:22-slim ships without it, which makes Prisma's engine unable to
+# detect the libssl version (noisy warnings + flaky migrate/generate).
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm@10.30.1
 
 # Install deps first so this layer caches unless the manifests change.
@@ -18,6 +21,8 @@ RUN pnpm build
 FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# openssl is needed by Prisma's schema engine for `migrate deploy` at startup.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm@10.30.1
 
 # Carry over from the builder:
