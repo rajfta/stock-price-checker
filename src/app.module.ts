@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { FinnhubModule } from "./finnhub/finnhub.module";
 import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { validate } from "./config/env.validation";
@@ -10,6 +11,7 @@ import { validate } from "./config/env.validation";
     imports: [
         ConfigModule.forRoot({ isGlobal: true, validate }),
         PrismaModule,
+        FinnhubModule,
         HealthModule,
     ],
     controllers: [AppController],
