@@ -38,10 +38,16 @@ export class PollerService {
     // immediate first poll.
     async pollSymbol(symbol: string): Promise<void> {
         const quote = await this.finnhub.getQuote(symbol);
-        await this.stockPrices.record(
-            symbol,
-            quote.c,
-            new Date(quote.t * 1000),
-        );
+        const timestamp = new Date(quote.t * 1000);
+
+        // Dedup: Finnhub returns a frozen quote when the market is closed.
+        // Skip storing if the latest row already has this exact timestamp,
+        // so the "last 10 prices" are distinct observations, not duplicates.
+        const latest = await this.stockPrices.getLatest(symbol);
+        if (latest && latest.timestamp.getTime() === timestamp.getTime()) {
+            return;
+        }
+
+        await this.stockPrices.record(symbol, quote.c, timestamp);
     }
 }

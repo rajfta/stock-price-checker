@@ -9,17 +9,20 @@ describe("PollerService", () => {
     let getActiveSymbols: jest.Mock;
     let getQuote: jest.Mock;
     let record: jest.Mock;
+    let getLatest: jest.Mock;
     const mockQuote = { c: 307.34, t: 1780689600 };
+    const mockDate = new Date(mockQuote.t * 1000);
 
     beforeEach(() => {
         getActiveSymbols = jest.fn();
         getQuote = jest.fn();
         record = jest.fn().mockResolvedValue(undefined);
+        getLatest = jest.fn().mockResolvedValue(null); // no prior price
 
         poller = new PollerService(
             { getActiveSymbols } as unknown as TrackedSymbolRepository,
             { getQuote } as unknown as FinnhubService,
-            { record } as unknown as StockPriceRepository,
+            { record, getLatest } as unknown as StockPriceRepository,
         );
     });
 
@@ -29,11 +32,29 @@ describe("PollerService", () => {
         await poller.pollSymbol("AAPL");
 
         expect(getQuote).toHaveBeenCalledWith("AAPL");
-        expect(record).toHaveBeenCalledWith(
-            "AAPL",
-            307.34,
-            new Date(1780689600 * 1000),
-        );
+        expect(record).toHaveBeenCalledWith("AAPL", 307.34, mockDate);
+    });
+
+    it("skips recording when the quote timestamp has not advanced", async () => {
+        getQuote.mockResolvedValue(mockQuote);
+        // The latest stored price has the SAME timestamp as the new quote.
+        getLatest.mockResolvedValue({ price: 307.34, timestamp: mockDate });
+
+        await poller.pollSymbol("AAPL");
+
+        expect(record).not.toHaveBeenCalled();
+    });
+
+    it("records when the latest stored timestamp is older", async () => {
+        getQuote.mockResolvedValue(mockQuote);
+        getLatest.mockResolvedValue({
+            price: 300,
+            timestamp: new Date((mockQuote.t - 60) * 1000),
+        });
+
+        await poller.pollSymbol("AAPL");
+
+        expect(record).toHaveBeenCalledWith("AAPL", 307.34, mockDate);
     });
 
     it("polls every active symbol on a tick", async () => {
@@ -61,11 +82,7 @@ describe("PollerService", () => {
         await expect(poller.tick()).resolves.toBeUndefined();
 
         expect(record).toHaveBeenCalledTimes(1);
-        expect(record).toHaveBeenCalledWith(
-            "TSLA",
-            mockQuote.c,
-            new Date(mockQuote.t * 1000),
-        );
+        expect(record).toHaveBeenCalledWith("TSLA", mockQuote.c, mockDate);
         expect(errorLog).toHaveBeenCalled();
 
         errorLog.mockRestore();

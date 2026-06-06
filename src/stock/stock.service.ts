@@ -15,6 +15,10 @@ export class StockService {
     ) {}
 
     async startTracking(symbol: string): Promise<void> {
+        if (await this.trackedSymbols.isActive(symbol)) {
+            return;
+        }
+
         await this.poller.pollSymbol(symbol); // Throws if invalid.
         await this.trackedSymbols.activate(symbol);
     }

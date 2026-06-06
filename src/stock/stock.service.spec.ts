@@ -8,6 +8,7 @@ describe("StockService", () => {
     let service: StockService;
     let pollSymbol: jest.Mock;
     let activate: jest.Mock;
+    let isActive: jest.Mock;
     let getLatest: jest.Mock;
     let getLastPrices: jest.Mock;
     let calculate: jest.Mock;
@@ -15,13 +16,14 @@ describe("StockService", () => {
     beforeEach(() => {
         pollSymbol = jest.fn().mockResolvedValue(undefined);
         activate = jest.fn().mockResolvedValue(undefined);
+        isActive = jest.fn().mockResolvedValue(false);
         getLatest = jest.fn();
         getLastPrices = jest.fn();
         calculate = jest.fn();
 
         service = new StockService(
             { pollSymbol } as unknown as PollerService,
-            { activate } as unknown as TrackedSymbolRepository,
+            { activate, isActive } as unknown as TrackedSymbolRepository,
             { getLatest, getLastPrices } as unknown as StockPriceRepository,
             { calculate },
         );
@@ -37,6 +39,15 @@ describe("StockService", () => {
             expect(pollSymbol.mock.invocationCallOrder[0]).toBeLessThan(
                 activate.mock.invocationCallOrder[0],
             );
+        });
+
+        it("does nothing when the symbol is already active", async () => {
+            isActive.mockResolvedValue(true);
+
+            await service.startTracking("AAPL");
+
+            expect(pollSymbol).not.toHaveBeenCalled();
+            expect(activate).not.toHaveBeenCalled();
         });
 
         it("does not activate when the symbol is invalid (poll rejects)", async () => {
