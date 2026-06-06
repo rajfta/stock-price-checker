@@ -1,44 +1,58 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
+    validate:
+        runs-on: ubuntu-latest
 
-    # Dummy values so config validation passes when the e2e test boots the
-    # app. No real secrets needed — the e2e stubs Prisma and only hits /health.
-    env:
-      NODE_ENV: test
-      PORT: "3000"
-      DATABASE_URL: postgresql://user:pass@localhost:5432/test?schema=public
-      FINNHUB_API_KEY: ci-test-key
-      FINNHUB_BASE_URL: https://finnhub.io/api/v1
+        env:
+            NODE_ENV: test
+            PORT: "3000"
+            DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?schema=public
+            FINNHUB_API_KEY: ci-test-key
+            FINNHUB_BASE_URL: https://finnhub.io/api/v1
 
-    steps:
-      - uses: actions/checkout@v4
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: postgres
+                ports:
+                    - "5432:5432"
+                options: >-
+                    --health-cmd "pg_isready -U postgres"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 5
 
-      # Pin pnpm to the version that generated the lockfile — newer pnpm's
-      # minimum-release-age policy would reject freshly-published deps.
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.1
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+            # Pin pnpm to the version that generated the lockfile — newer pnpm's
+            # minimum-release-age policy would reject freshly-published deps.
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10.30.1
 
-      # --ignore-scripts skips the postinstall `prisma generate`; we run it
-      # explicitly so the generated client exists before lint/test/build.
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm prisma generate
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
 
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm test:e2e
+            # --ignore-scripts skips the postinstall `prisma generate`; we run it
+            # explicitly so the generated client exists before lint/test/build.
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm prisma generate
+
+            - run: pnpm lint
+            - run: pnpm test
+            - run: pnpm build
+            - run: pnpm test:e2e
+            - run: pnpm test:integration

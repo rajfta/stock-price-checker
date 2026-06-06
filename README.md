@@ -6,13 +6,13 @@ price plus a 10-point moving average through a documented REST API.
 
 ## Tech stack
 
-- **NestJS 11** (TypeScript, strict)
+- **NestJS 11** (TypeScript — `strictNullChecks`, `noImplicitAny`)
 - **PostgreSQL 16** + **Prisma 7** (driver adapter)
 - **@nestjs/schedule** — per-minute cron polling
 - **@nestjs/axios + RxJS** — resilient Finnhub client (timeout / retry / error mapping)
 - **class-validator** — environment + request validation
 - **@nestjs/swagger** — OpenAPI docs
-- **Jest** (unit + e2e), **ESLint** + **Prettier**
+- **Jest** (unit, integration, e2e), **ESLint** + **Prettier**
 - **Docker** + **Docker Compose**, **GitHub Actions** CI
 
 ## Quick start (Docker — recommended)
@@ -105,12 +105,20 @@ Missing or invalid variables fail fast at startup (validated by class-validator)
 ## Testing
 
 ```bash
-pnpm test       # unit tests
-pnpm test:e2e   # e2e (boots the app, stubs the DB)
+pnpm test             # unit tests (fast, fully mocked)
+pnpm test:e2e         # e2e — boots the app, stubs the DB, hits /health
+pnpm test:integration # integration — real Postgres, real Prisma, only Finnhub stubbed
 pnpm lint
 ```
 
-- **TDD** for business logic; mocked dependencies keep tests fast and deterministic.
+`test:integration` needs a reachable Postgres (`docker compose up -d postgres` is
+enough). It creates a dedicated **`stocks_test`** database, applies the migrations to
+it, and exercises the full stack — controller → service → poller → repositories →
+Prisma → Postgres — with only the outbound Finnhub HTTP call stubbed. Your dev/prod
+data is never touched.
+
+Business logic is built **test-first**; mocked dependencies keep the unit suite fast and
+deterministic.
 
 ## License
 
