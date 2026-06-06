@@ -20,7 +20,11 @@ export class StockController {
     @ApiOperation({
         summary: "Current price, last-updated time, and moving average",
     })
-    @ApiParam({ name: "symbol", example: "AAPL" })
+    @ApiParam({
+        name: "symbol",
+        example: "AAPL",
+        description: "The stock symbol to query.",
+    })
     @ApiOkResponse({ type: StockSummaryDto })
     @ApiBadRequestResponse({ description: "Invalid stock symbol" })
     @ApiNotFoundResponse({ description: "No price data for the symbol" })
@@ -32,7 +36,11 @@ export class StockController {
 
     @Put(":symbol")
     @ApiOperation({ summary: "Start periodic price checks for a symbol" })
-    @ApiParam({ name: "symbol", example: "AAPL" })
+    @ApiParam({
+        name: "symbol",
+        example: "AAPL",
+        description: "The stock symbol to track.",
+    })
     @ApiOkResponse({ type: StockSummaryDto })
     @ApiBadRequestResponse({ description: "Invalid stock symbol" })
     @ApiNotFoundResponse({ description: "Unknown symbol (rejected upstream)" })
