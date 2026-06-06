@@ -19,7 +19,8 @@ export class StockSummaryDto {
     @ApiProperty({
         example: 305.12,
         nullable: true,
-        description: "Mean of the last 10 prices, or null if none exist yet.",
+        description:
+            "Mean of the last 10 prices max, or null if none exist yet.",
     })
     movingAverage: number | null;
 }
