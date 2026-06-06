@@ -21,4 +21,13 @@ export class TrackedSymbolRepository {
             create: { symbol, active: true },
         });
     }
+
+    async isActive(symbol: string): Promise<boolean> {
+        const row = await this.prisma.trackedSymbol.findUnique({
+            where: { symbol },
+            select: { active: true },
+        });
+
+        return row?.active === true;
+    }
 }

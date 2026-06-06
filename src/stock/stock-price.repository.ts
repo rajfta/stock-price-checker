@@ -1,35 +1,31 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
+interface PricePoint {
+    price: number;
+    timestamp: Date;
+}
+
 @Injectable()
 export class StockPriceRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async getLastPrices(symbol: string, limit = 10): Promise<number[]> {
-        const rows = await this.prisma.stockPrice.findMany({
+    async getRecent(symbol: string, limit = 10): Promise<PricePoint[]> {
+        return this.prisma.stockPrice.findMany({
             where: { symbol },
             orderBy: { timestamp: "desc" },
             take: limit,
-            select: { price: true },
+            select: { price: true, timestamp: true },
         });
-
-        return rows.map((row) => row.price);
     }
 
-    async getLatest(
-        symbol: string,
-    ): Promise<{ price: number; timestamp: Date } | null> {
-        const row = await this.prisma.stockPrice.findFirst({
+    // Single latest row — used by the poller's dedup check.
+    async getLatest(symbol: string): Promise<PricePoint | null> {
+        return this.prisma.stockPrice.findFirst({
             where: { symbol },
             orderBy: { timestamp: "desc" },
             select: { price: true, timestamp: true },
         });
-
-        if (!row) {
-            return null;
-        }
-
-        return { price: row.price, timestamp: row.timestamp };
     }
 
     async record(

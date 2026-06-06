@@ -5,12 +5,14 @@ describe("TrackedSymbolRepository", () => {
     let repository: TrackedSymbolRepository;
     let findMany: jest.Mock;
     let upsert: jest.Mock;
+    let findUnique: jest.Mock;
 
     beforeEach(() => {
         findMany = jest.fn();
         upsert = jest.fn();
+        findUnique = jest.fn();
         const prisma = {
-            trackedSymbol: { findMany, upsert },
+            trackedSymbol: { findMany, upsert, findUnique },
         } as unknown as PrismaService;
         repository = new TrackedSymbolRepository(prisma);
     });
@@ -36,6 +38,30 @@ describe("TrackedSymbolRepository", () => {
             where: { symbol: "AAPL" },
             update: { active: true },
             create: { symbol: "AAPL", active: true },
+        });
+    });
+
+    describe("isActive", () => {
+        it("returns true when the symbol exists and is active", async () => {
+            findUnique.mockResolvedValue({ active: true });
+
+            expect(await repository.isActive("AAPL")).toBe(true);
+            expect(findUnique).toHaveBeenCalledWith({
+                where: { symbol: "AAPL" },
+                select: { active: true },
+            });
+        });
+
+        it("returns false when the symbol is inactive", async () => {
+            findUnique.mockResolvedValue({ active: false });
+
+            expect(await repository.isActive("AAPL")).toBe(false);
+        });
+
+        it("returns false when the symbol does not exist", async () => {
+            findUnique.mockResolvedValue(null);
+
+            expect(await repository.isActive("NOPE")).toBe(false);
         });
     });
 });

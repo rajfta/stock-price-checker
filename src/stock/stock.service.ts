@@ -15,19 +15,24 @@ export class StockService {
     ) {}
 
     async startTracking(symbol: string): Promise<void> {
+        if (await this.trackedSymbols.isActive(symbol)) {
+            return;
+        }
+
         await this.poller.pollSymbol(symbol); // Throws if invalid.
         await this.trackedSymbols.activate(symbol);
     }
 
     async getSummary(symbol: string): Promise<StockSummaryDto> {
-        const latest = await this.stockPrices.getLatest(symbol);
-        if (!latest) {
+        const recent = await this.stockPrices.getRecent(symbol);
+        if (recent.length === 0) {
             throw new NotFoundException(`No price data for symbol: ${symbol}`);
         }
 
-        // Get the last prices (default 10) and compute the moving average.
-        const prices = await this.stockPrices.getLastPrices(symbol);
-        const movingAverage = this.movingAverage.calculate(prices);
+        const [latest] = recent;
+        const movingAverage = this.movingAverage.calculate(
+            recent.map((row) => row.price),
+        );
 
         return {
             symbol,
