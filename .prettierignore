@@ -1,0 +1,6 @@
+# Generated code — never format
+src/generated
+
+# Build output & deps
+dist
+node_modules
