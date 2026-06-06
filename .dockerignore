@@ -1,0 +1,14 @@
+# Reinstalled / regenerated / rebuilt inside the image
+node_modules
+dist
+src/generated
+
+# Secrets & local-only — never bake into the image (env comes from compose)
+.env
+
+# Not needed at build/runtime
+.git
+coverage
+docs
+.vscode
+*.log

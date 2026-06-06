@@ -17,5 +17,24 @@ services:
             timeout: 5s
             retries: 5
 
+    app:
+        build: .
+        container_name: stock-price-checker-app
+        restart: unless-stopped
+        # Wait for Postgres to be accepting connections (the healthcheck above)
+        # before the app boots and runs migrate deploy.
+        depends_on:
+            postgres:
+                condition: service_healthy
+        # Secrets (FINNHUB_API_KEY, etc.) come from .env at runtime.
+        env_file:
+            - .env
+        environment:
+            NODE_ENV: production
+            # Inside compose, reach Postgres by its SERVICE NAME, not localhost.
+            DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stocks?schema=public
+        ports:
+            - "3000:3000"
+
 volumes:
     db-data:
