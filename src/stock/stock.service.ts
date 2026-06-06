@@ -1,15 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { StockSummaryDto } from "./dto/stock-summary.dto";
 import { MovingAverageService } from "./moving-average.service";
 import { PollerService } from "./poller.service";
 import { StockPriceRepository } from "./stock-price.repository";
 import { TrackedSymbolRepository } from "./tracked-symbol.repository";
-
-export interface StockSummary {
-    symbol: string;
-    price: number;
-    lastUpdated: Date;
-    movingAverage: number | null;
-}
 
 @Injectable()
 export class StockService {
@@ -25,7 +19,7 @@ export class StockService {
         await this.trackedSymbols.activate(symbol);
     }
 
-    async getSummary(symbol: string): Promise<StockSummary> {
+    async getSummary(symbol: string): Promise<StockSummaryDto> {
         const latest = await this.stockPrices.getLatest(symbol);
         if (!latest) {
             throw new NotFoundException(`No price data for symbol: ${symbol}`);
