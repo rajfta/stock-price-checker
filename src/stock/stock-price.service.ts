@@ -16,6 +16,22 @@ export class StockPriceService {
         return rows.map((row) => row.price);
     }
 
+    async getLatest(
+        symbol: string,
+    ): Promise<{ price: number; timestamp: Date } | null> {
+        const row = await this.prisma.stockPrice.findFirst({
+            where: { symbol },
+            orderBy: { timestamp: "desc" },
+            select: { price: true, timestamp: true },
+        });
+
+        if (!row) {
+            return null;
+        }
+
+        return { price: row.price, timestamp: row.timestamp };
+    }
+
     async record(
         symbol: string,
         price: number,

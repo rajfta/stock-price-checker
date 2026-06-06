@@ -13,4 +13,12 @@ export class TrackedSymbolService {
 
         return rows.map((row) => row.symbol);
     }
+
+    async activate(symbol: string): Promise<void> {
+        await this.prisma.trackedSymbol.upsert({
+            where: { symbol },
+            update: { active: true },
+            create: { symbol, active: true },
+        });
+    }
 }

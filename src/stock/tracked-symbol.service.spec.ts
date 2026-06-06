@@ -4,11 +4,13 @@ import { TrackedSymbolService } from "./tracked-symbol.service";
 describe("TrackedSymbolService", () => {
     let service: TrackedSymbolService;
     let findMany: jest.Mock;
+    let upsert: jest.Mock;
 
     beforeEach(() => {
         findMany = jest.fn();
+        upsert = jest.fn();
         const prisma = {
-            trackedSymbol: { findMany },
+            trackedSymbol: { findMany, upsert },
         } as unknown as PrismaService;
         service = new TrackedSymbolService(prisma);
     });
@@ -22,6 +24,18 @@ describe("TrackedSymbolService", () => {
         expect(findMany).toHaveBeenCalledWith({
             where: { active: true },
             select: { symbol: true },
+        });
+    });
+
+    it("activates a symbol for tracking", async () => {
+        upsert.mockResolvedValue({});
+
+        await service.activate("AAPL");
+
+        expect(upsert).toHaveBeenCalledWith({
+            where: { symbol: "AAPL" },
+            update: { active: true },
+            create: { symbol: "AAPL", active: true },
         });
     });
 });
