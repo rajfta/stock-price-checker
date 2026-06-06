@@ -21,21 +21,21 @@ describe("StockPriceRepository", () => {
         repository = new StockPriceRepository(prisma);
     });
 
-    it("returns the last 10 prices for a symbol (newest first) as numbers", async () => {
-        findMany.mockResolvedValue([
-            { price: 300 },
-            { price: 200 },
-            { price: 100 },
-        ]);
+    it("returns the most recent rows (price + timestamp, newest first)", async () => {
+        const rows = [
+            { price: 307.34, timestamp: mockTimestamp },
+            { price: 300, timestamp: new Date("2026-06-05T00:00:00.000Z") },
+        ];
+        findMany.mockResolvedValue(rows);
 
-        const prices = await repository.getLastPrices(mockSymbol);
+        const result = await repository.getRecent(mockSymbol);
 
-        expect(prices).toEqual([300, 200, 100]);
+        expect(result).toEqual(rows);
         expect(findMany).toHaveBeenCalledWith({
             where: { symbol: mockSymbol },
             orderBy: { timestamp: "desc" },
             take: 10,
-            select: { price: true },
+            select: { price: true, timestamp: true },
         });
     });
 
@@ -53,7 +53,7 @@ describe("StockPriceRepository", () => {
         });
     });
 
-    it("returns the latest price and the timestamp for a symbol", async () => {
+    it("returns the latest price and timestamp for a symbol", async () => {
         findFirst.mockResolvedValue({
             price: mockPrice,
             timestamp: mockTimestamp,
@@ -61,10 +61,7 @@ describe("StockPriceRepository", () => {
 
         const result = await repository.getLatest(mockSymbol);
 
-        expect(result).toEqual({
-            price: mockPrice,
-            timestamp: mockTimestamp,
-        });
+        expect(result).toEqual({ price: mockPrice, timestamp: mockTimestamp });
         expect(findFirst).toHaveBeenCalledWith({
             where: { symbol: mockSymbol },
             orderBy: { timestamp: "desc" },
@@ -78,10 +75,5 @@ describe("StockPriceRepository", () => {
         const result = await repository.getLatest(mockSymbol);
 
         expect(result).toBeNull();
-        expect(findFirst).toHaveBeenCalledWith({
-            where: { symbol: mockSymbol },
-            orderBy: { timestamp: "desc" },
-            select: { price: true, timestamp: true },
-        });
     });
 });

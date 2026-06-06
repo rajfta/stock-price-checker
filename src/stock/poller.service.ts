@@ -14,12 +14,16 @@ export class PollerService {
         private readonly stockPrices: StockPriceRepository,
     ) {}
 
-    // ONE global cron over the active-symbols work list (the restart-safe
-    // poller design). Registered on bootstrap via ScheduleModule.forRoot().
     @Cron(CronExpression.EVERY_MINUTE)
     async tick(): Promise<void> {
         const symbols = await this.trackedSymbols.getActiveSymbols();
 
+        // PERF NOTE: this is O(N) DB queries per tick — pollSymbol does one
+        // getLatest (dedup) + one create per symbol. Fine for a handful of
+        // symbols. To scale to many, collapse to O(1): add a
+        // @@unique([symbol, timestamp]) constraint and batch with
+        // createMany({ skipDuplicates: true }), dropping the per-symbol dedup
+        // read entirely. (Finnhub HTTP stays N — its /quote is single-symbol.)
         for (const symbol of symbols) {
             try {
                 await this.pollSymbol(symbol);
@@ -34,8 +38,6 @@ export class PollerService {
         }
     }
 
-    // Fetch + store one symbol. Reused by the cron above and by PUT's
-    // immediate first poll.
     async pollSymbol(symbol: string): Promise<void> {
         const quote = await this.finnhub.getQuote(symbol);
         const timestamp = new Date(quote.t * 1000);

@@ -9,22 +9,20 @@ describe("StockService", () => {
     let pollSymbol: jest.Mock;
     let activate: jest.Mock;
     let isActive: jest.Mock;
-    let getLatest: jest.Mock;
-    let getLastPrices: jest.Mock;
+    let getRecent: jest.Mock;
     let calculate: jest.Mock;
 
     beforeEach(() => {
         pollSymbol = jest.fn().mockResolvedValue(undefined);
         activate = jest.fn().mockResolvedValue(undefined);
         isActive = jest.fn().mockResolvedValue(false);
-        getLatest = jest.fn();
-        getLastPrices = jest.fn();
+        getRecent = jest.fn();
         calculate = jest.fn();
 
         service = new StockService(
             { pollSymbol } as unknown as PollerService,
             { activate, isActive } as unknown as TrackedSymbolRepository,
-            { getLatest, getLastPrices } as unknown as StockPriceRepository,
+            { getRecent } as unknown as StockPriceRepository,
             { calculate },
         );
     });
@@ -61,11 +59,13 @@ describe("StockService", () => {
     });
 
     describe("getSummary", () => {
-        it("assembles latest price, last-updated time, and moving average", async () => {
+        it("assembles latest price, last-updated time, and moving average from one fetch", async () => {
             const timestamp = new Date("2026-06-06T00:00:00.000Z");
-            getLatest.mockResolvedValue({ price: 307.34, timestamp });
-            getLastPrices.mockResolvedValue([300, 310]);
-            calculate.mockReturnValue(305);
+            getRecent.mockResolvedValue([
+                { price: 307.34, timestamp },
+                { price: 300, timestamp: new Date("2026-06-05T00:00:00.000Z") },
+            ]);
+            calculate.mockReturnValue(303.67);
 
             const summary = await service.getSummary("AAPL");
 
@@ -73,13 +73,13 @@ describe("StockService", () => {
                 symbol: "AAPL",
                 price: 307.34,
                 lastUpdated: timestamp,
-                movingAverage: 305,
+                movingAverage: 303.67,
             });
-            expect(calculate).toHaveBeenCalledWith([300, 310]);
+            expect(calculate).toHaveBeenCalledWith([307.34, 300]);
         });
 
         it("throws NotFoundException when the symbol has no price data", async () => {
-            getLatest.mockResolvedValue(null);
+            getRecent.mockResolvedValue([]);
 
             await expect(service.getSummary("NOPE")).rejects.toThrow(
                 NotFoundException,
