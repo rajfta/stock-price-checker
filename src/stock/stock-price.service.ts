@@ -5,9 +5,6 @@ import { PrismaService } from "../prisma/prisma.service";
 export class StockPriceService {
     constructor(private readonly prisma: PrismaService) {}
 
-    // The data feed for the moving average: the most recent `limit` prices
-    // for a symbol. Order doesn't affect the mean, but "desc" makes the
-    // intent ("last 10") explicit.
     async getLastPrices(symbol: string, limit = 10): Promise<number[]> {
         const rows = await this.prisma.stockPrice.findMany({
             where: { symbol },
@@ -17,5 +14,15 @@ export class StockPriceService {
         });
 
         return rows.map((row) => row.price);
+    }
+
+    async record(
+        symbol: string,
+        price: number,
+        timestamp: Date,
+    ): Promise<void> {
+        await this.prisma.stockPrice.create({
+            data: { symbol, price, timestamp },
+        });
     }
 }
