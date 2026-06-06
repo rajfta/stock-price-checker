@@ -4,11 +4,13 @@ import { StockPriceService } from "./stock-price.service";
 describe("StockPriceService", () => {
     let service: StockPriceService;
     let findMany: jest.Mock;
+    let create: jest.Mock;
 
     beforeEach(() => {
         findMany = jest.fn();
+        create = jest.fn();
         const prisma = {
-            stockPrice: { findMany },
+            stockPrice: { findMany, create },
         } as unknown as PrismaService;
         service = new StockPriceService(prisma);
     });
@@ -28,6 +30,17 @@ describe("StockPriceService", () => {
             orderBy: { timestamp: "desc" },
             take: 10,
             select: { price: true },
+        });
+    });
+
+    it("records a price row for a symbol", async () => {
+        create.mockResolvedValue({});
+        const timestamp = new Date("2026-06-06T00:00:00.000Z");
+
+        await service.record("AAPL", 307.34, timestamp);
+
+        expect(create).toHaveBeenCalledWith({
+            data: { symbol: "AAPL", price: 307.34, timestamp },
         });
     });
 });
