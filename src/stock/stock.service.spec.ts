@@ -1,5 +1,4 @@
 import { NotFoundException } from "@nestjs/common";
-import { MovingAverageService } from "./moving-average.service";
 import { PollerService } from "./poller.service";
 import { StockPriceService } from "./stock-price.service";
 import { StockService } from "./stock.service";

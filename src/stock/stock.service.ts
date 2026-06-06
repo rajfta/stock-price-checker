@@ -31,13 +31,15 @@ export class StockService {
             throw new NotFoundException(`No price data for symbol: ${symbol}`);
         }
 
+        /// Get the last prices (including the latest, default=10) and calculate the moving average.
         const prices = await this.stockPrices.getLastPrices(symbol);
+        const movingAverage = this.movingAverage.calculate(prices);
 
         return {
             symbol,
             price: latest.price,
             lastUpdated: latest.timestamp,
-            movingAverage: this.movingAverage.calculate(prices),
+            movingAverage,
         };
     }
 }
